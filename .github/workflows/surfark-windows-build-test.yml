@@ -7,11 +7,16 @@
 #   machines only (4 cores, 16 GB memory, a 6-hour limit per job).
 # - This workflow answers one question: does a plain Windows x64 build finish here at all,
 #   and how long does it take? It is Zen's Windows job cut down to one pass: x86_64 only,
-#   no PGO, no LTO, no caches, no secrets, nothing uploaded and nothing published.
+#   no PGO, no LTO, no caches, no secrets, nothing published.
+# - First result (2026-11-12, Zen unchanged): it works. Setup 11 minutes, build 133 minutes,
+#   2 hours 36 minutes in all, well inside the 6-hour limit.
+# - Since the rename (branch surfark/rename) the installer and the zip are kept as run artifacts
+#   for 5 days so the build can be tried. They are unsigned, unoptimised test builds: Windows
+#   will warn about them, and they are slower than a real Zen release.
 # - The steps are copied from windows-release-build.yml as of Zen commit deb01b6 (2026-11-11).
 #   If this breaks after merging a newer Zen, compare with that file first.
 # - It runs when started by hand (Actions tab, "Run workflow") or when the branch
-#   surfark/build-test is pushed.
+#   surfark/build-test or surfark/rename is pushed.
 name: Surfark build test (Windows x64, no PGO)
 
 permissions:
@@ -22,6 +27,7 @@ on:
   push:
     branches:
       - surfark/build-test
+      - surfark/rename
 
 concurrency:
   group: surfark-build-test
@@ -177,3 +183,13 @@ jobs:
           npm run package
           ls -la ./dist
           echo "Packaged. Whole job so far: $(( ($(date -u +%s) - $(cat "$RUNNER_TEMP/t0")) / 60 )) minutes" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the installer and the zip (test builds, kept 5 days)
+        uses: actions/upload-artifact@v4
+        with:
+          name: surfark-browser-windows-x64-test-build
+          retention-days: 5
+          if-no-files-found: warn
+          path: |
+            dist/*.installer.exe
+            dist/*.zip

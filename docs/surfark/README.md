@@ -21,16 +21,56 @@ Context for whoever reads this next (person or AI):
 
 ## Status on 2026-11-12
 
-Nothing in Zen's own files has been changed. The fork still builds "Zen Browser", with Zen's
-name, profile folder and update server.
+Two things are known:
 
-**Do not install a build of this fork yet.** Until it is renamed it would use the same profile
-folder as a real Zen install on the same PC and would try to update itself from Zen's server.
-The rename has to change the app's base name and binary name (so it gets its own profile and
-install folders) and switch the updater off or point it at our own releases. That is the next
-piece of work here, after the build test below.
+1. **GitHub's free machines can build this fork.** Zen unchanged, Windows x64, one pass without
+   PGO or LTO: 2 hours 36 minutes (setup 11, build 133, packaging about 10), inside the 6-hour
+   limit. Such a build is slower to use than a real Zen release, which is optimised in several
+   passes on bigger machines. Whether an optimised build fits is not tested.
+2. **The rename is written but not proven.** See the change log entry below. It builds or fails
+   on GitHub; nobody has started the result yet.
 
 ## Change log
+
+### 2026-11-12: renamed to Surfark Browser (branch `surfark/rename`)
+
+Based on Zen 1.24.2b (Firefox 160.0), commit deb01b6.
+
+| What | Where | Was | Now |
+|---|---|---|---|
+| Product name | `surfer.json` `name` | Zen Browser | Surfark Browser |
+| Vendor | `surfer.json` `vendor`, mozconfig `MOZ_APP_VENDOR` | Zen OSS Team / Zen Team | Surfark |
+| Program name | `surfer.json` `binaryName` | `zen` (zen.exe) | `surfark` (surfark.exe) |
+| Brand names (release) | `surfer.json` `brands.release` | Zen, Zen Browser | Surfark, Surfark Browser |
+| Base name | `configs/common/mozconfig` | Zen | Surfark |
+| Profile folder | mozconfig `MOZ_APP_PROFILE`, `--with-user-appdir` | `zen` | `surfark` |
+| Distribution id | mozconfig | `app.zen-browser` | `app.surfark.browser` |
+| Release repository | `surfer.json` `brands.release.release.github.repo` | zen-browser/desktop | this repository |
+| Update server | `surfer.json` `updateHostname` | updates.zen-browser.app | updates.surfark.invalid |
+| Source link | mozconfig `MOZ_SOURCE_REPO` | Zen's repository | this repository |
+
+Why: with its own program name, base name and profile folder, Surfark Browser installs next to a
+real Zen and the two never share a profile (on Windows: `%APPDATA%\surfark` instead of
+`%APPDATA%\zen`). The update server is a name that can never exist (`.invalid`), so this build
+cannot update itself to a Zen build. It also means there are no automatic updates at all yet:
+a new version is a new download.
+
+The three mozconfig values `MOZ_APP_VENDOR`, `MOZ_APP_PROFILE` and `--with-user-appdir` override
+defaults that Zen sets in `src/toolkit/moz-configure.patch`. They are set in the mozconfig so
+Zen's patch file stays untouched and merges cleanly.
+
+Not changed, on purpose or not yet:
+- `surfer.json` `appId` is still `zen`. What the build tool uses it for was not checked.
+- The "twilight" brand in `surfer.json` still says Zen. Only the release brand is used here.
+- Icons and artwork are still Zen's. They need replacing before anything is shared with others.
+- Zen's own texts (settings pages, welcome screens, "Zen Mods") still say Zen, and links still
+  lead to Zen's sites and services. The mods store and docs are Zen's and keep working.
+- Zen's release workflows are untouched and unused here; they need paid machines and secrets.
+
+Not verified: whether the renamed build starts and behaves. The build test workflow now keeps
+the installer and zip as run artifacts (5 days) so J can try them. First things to check when
+trying it: it starts; `about:support` shows the profile under `%APPDATA%\surfark`; a real Zen
+install on the same PC still opens its own windows and profile.
 
 ### 2026-11-12: build test workflow (branch `surfark/build-test`)
 
@@ -40,4 +80,4 @@ and several optimisation passes. The test is Zen's Windows job cut down to one p
 PGO, no LTO, no caches, no secrets). It uploads and publishes nothing; it only reports whether the
 build finishes and how long it takes (see the run's summary).
 
-Result: not known yet at the time of writing. Record it here.
+Result: success on the first try, 2 hours 36 minutes (run 43194892023, Zen commit deb01b6).

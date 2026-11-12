@@ -1,3 +1,11 @@
+<!-- SURFARK-HOOK: fork notice. Everything below it is Zen's README, kept so upstream merges stay clean. -->
+> [!NOTE]
+> **This is Surfark Browser for Windows**, a personal fork of [Zen Browser](https://github.com/zen-browser/desktop)
+> paired with [surfark-browser-android](https://github.com/BigJonGoodwin/surfark-browser-android).
+> It is not Zen and is not supported by Zen's developers: please do not report its problems to them.
+> What this fork changes is listed in [docs/surfark/README.md](docs/surfark/README.md). The rest of this page is
+> Zen's own README, and its download links lead to Zen, not to this fork.
+
 <!--
    - This Source Code Form is subject to the terms of the Mozilla Public
    - License, v. 2.0. If a copy of the MPL was not distributed with this

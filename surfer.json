@@ -1,8 +1,8 @@
 {
-  "name": "Zen Browser",
-  "vendor": "Zen OSS Team",
+  "name": "Surfark Browser",
+  "vendor": "Surfark",
   "appId": "zen",
-  "binaryName": "zen",
+  "binaryName": "surfark",
   "version": {
     "product": "firefox",
     "version": "160.0",
@@ -16,13 +16,13 @@
   "brands": {
     "release": {
       "backgroundColor": "#282A33",
-      "brandShorterName": "Zen",
-      "brandShortName": "Zen",
-      "brandFullName": "Zen Browser",
+      "brandShorterName": "Surfark",
+      "brandShortName": "Surfark",
+      "brandFullName": "Surfark Browser",
       "release": {
         "displayVersion": "1.24.2b",
         "github": {
-          "repo": "zen-browser/desktop"
+          "repo": "BigJonGoodwin/surfark-browser-desktop"
         },
         "archives": {
           "windows": "windows.mar",
@@ -53,5 +53,5 @@
     ],
     "licenseType": "MPL-2.0"
   },
-  "updateHostname": "updates.zen-browser.app"
+  "updateHostname": "updates.surfark.invalid"
 }
