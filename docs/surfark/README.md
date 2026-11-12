@@ -39,11 +39,11 @@ Based on Zen 1.24.2b (Firefox 160.0), commit deb01b6.
 | What | Where | Was | Now |
 |---|---|---|---|
 | Product name | `surfer.json` `name` | Zen Browser | Surfark Browser |
-| Vendor | `surfer.json` `vendor`, mozconfig `MOZ_APP_VENDOR` | Zen OSS Team / Zen Team | Surfark |
+| Vendor | `surfer.json` `vendor`, `src/toolkit/moz-configure.patch` | Zen OSS Team / Zen Team | Surfark |
 | Program name | `surfer.json` `binaryName` | `zen` (zen.exe) | `surfark` (surfark.exe) |
 | Brand names (release) | `surfer.json` `brands.release` | Zen, Zen Browser | Surfark, Surfark Browser |
 | Base name | `configs/common/mozconfig` | Zen | Surfark |
-| Profile folder | mozconfig `MOZ_APP_PROFILE`, `--with-user-appdir` | `zen` | `surfark` |
+| Profile folder | `src/toolkit/moz-configure.patch` (`MOZ_APP_PROFILE`), mozconfig `--with-user-appdir` | `zen` | `surfark` |
 | Distribution id | mozconfig | `app.zen-browser` | `app.surfark.browser` |
 | Release repository | `surfer.json` `brands.release.release.github.repo` | zen-browser/desktop | this repository |
 | Update server | `surfer.json` `updateHostname` | updates.zen-browser.app | updates.surfark.invalid |
@@ -55,9 +55,11 @@ real Zen and the two never share a profile (on Windows: `%APPDATA%\surfark` inst
 cannot update itself to a Zen build. It also means there are no automatic updates at all yet:
 a new version is a new download.
 
-The three mozconfig values `MOZ_APP_VENDOR`, `MOZ_APP_PROFILE` and `--with-user-appdir` override
-defaults that Zen sets in `src/toolkit/moz-configure.patch`. They are set in the mozconfig so
-Zen's patch file stays untouched and merges cleanly.
+Two of these live in one of Zen's patch files, `src/toolkit/moz-configure.patch`: the defaults for
+`MOZ_APP_VENDOR` ("Zen Team" -> "Surfark") and `MOZ_APP_PROFILE` ("zen" -> "surfark"). A first
+attempt set them in the mozconfig instead, to leave Zen's patch alone; Firefox's configure refuses
+that ("can not be set by mozconfig"), so the patch is the only place. Patch files cannot carry a
+marker comment: after merging a newer Zen, check that these two lines still say Surfark/surfark.
 
 Not changed, on purpose or not yet:
 - `surfer.json` `appId` is still `zen`. What the build tool uses it for was not checked.

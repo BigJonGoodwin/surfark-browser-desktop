@@ -4,12 +4,12 @@
 
 # Browser branding
 ac_add_options --with-app-name=${binName}
-# SURFARK-HOOK: Surfark Browser's own base name, vendor, profile folder and distribution id, so it
-# installs and keeps its profiles apart from a real Zen on the same PC (see docs/surfark/README.md).
-# Zen's values were: basename Zen, vendor "Zen Team", profile and user-appdir "zen", id app.zen-browser.
+# SURFARK-HOOK: Surfark Browser's own base name, user folder and distribution id, so it installs and
+# keeps its profiles apart from a real Zen on the same PC (see docs/surfark/README.md).
+# Zen's values were: basename Zen, user-appdir "zen", id app.zen-browser.
+# The vendor and the profile folder cannot be set here (configure refuses them from a mozconfig);
+# they are the two defaults changed in src/toolkit/moz-configure.patch.
 ac_add_options --with-app-basename=Surfark
-ac_add_options MOZ_APP_VENDOR=Surfark
-ac_add_options MOZ_APP_PROFILE=surfark
 ac_add_options --with-user-appdir=surfark
 
 # Localization (Must be an absolute path)
