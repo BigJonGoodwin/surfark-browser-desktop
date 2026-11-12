@@ -10,6 +10,8 @@
 #   no PGO, no LTO, no caches, no secrets, nothing published.
 # - First result (2026-11-12, Zen unchanged): it works. Setup 11 minutes, build 133 minutes,
 #   2 hours 36 minutes in all, well inside the 6-hour limit.
+# - Second result (2026-11-12, renamed to Surfark Browser, commit 8832faf): 1 hour 49 minutes
+#   (setup 8, build 90), artifact 388 MB.
 # - Since the rename (branch surfark/rename) the installer and the zip are kept as run artifacts
 #   for 5 days so the build can be tried. They are unsigned, unoptimised test builds: Windows
 #   will warn about them, and they are slower than a real Zen release.
@@ -28,6 +30,10 @@ on:
     branches:
       - surfark/build-test
       - surfark/rename
+    # Notes-only changes do not need a two-hour build.
+    paths-ignore:
+      - "docs/**"
+      - "README.md"
 
 concurrency:
   group: surfark-build-test

@@ -27,8 +27,10 @@ Two things are known:
    PGO or LTO: 2 hours 36 minutes (setup 11, build 133, packaging about 10), inside the 6-hour
    limit. Such a build is slower to use than a real Zen release, which is optimised in several
    passes on bigger machines. Whether an optimised build fits is not tested.
-2. **The rename is written but not proven.** See the change log entry below. It builds or fails
-   on GitHub; nobody has started the result yet.
+2. **The renamed fork builds.** Commit 8832faf built in 1 hour 49 minutes (run 43227347722) and
+   left the installer and zip as the artifact `surfark-browser-windows-x64-test-build` (388 MB,
+   kept until 2026-11-17). Nobody has started the result yet, so whether it runs and keeps its
+   profile apart from Zen is still unproven. See the change log entry below for what to check.
 
 ## Change log
 
