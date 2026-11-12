@@ -1,0 +1,179 @@
+# Surfark Browser (desktop): can GitHub's free machines build this fork for Windows?
+#
+# Context (for whoever reads this next, person or AI):
+# - This fork of Zen is the desktop half of Surfark Browser. Zen's own release builds
+#   (windows-release-build.yml) run on paid Blacksmith machines with 8 to 16 cores and use
+#   profile-guided optimisation in several passes. A personal fork has GitHub's standard
+#   machines only (4 cores, 16 GB memory, a 6-hour limit per job).
+# - This workflow answers one question: does a plain Windows x64 build finish here at all,
+#   and how long does it take? It is Zen's Windows job cut down to one pass: x86_64 only,
+#   no PGO, no LTO, no caches, no secrets, nothing uploaded and nothing published.
+# - The steps are copied from windows-release-build.yml as of Zen commit deb01b6 (2026-11-11).
+#   If this breaks after merging a newer Zen, compare with that file first.
+# - It runs when started by hand (Actions tab, "Run workflow") or when the branch
+#   surfark/build-test is pushed.
+name: Surfark build test (Windows x64, no PGO)
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - surfark/build-test
+
+concurrency:
+  group: surfark-build-test
+  cancel-in-progress: true
+
+jobs:
+  windows-x64:
+    name: Windows x64, one pass
+    runs-on: ubuntu-24.04
+    timeout-minutes: 355
+    env:
+      CARGO_TERM_COLOR: always
+      CARGO_INCREMENTAL: 0
+      SURFER_COMPAT: x86_64
+    steps:
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+
+      - name: Machine report (start), add swap
+        run: |
+          nproc
+          free -h
+          df -h / /mnt || true
+          SWAP_DIR=$( sudo test -d /mnt && echo /mnt || echo / )
+          sudo fallocate -l 8G $SWAP_DIR/surfark-swap
+          sudo chmod 600 $SWAP_DIR/surfark-swap
+          sudo mkswap $SWAP_DIR/surfark-swap
+          sudo swapon $SWAP_DIR/surfark-swap
+          free -h
+          date -u +%s > "$RUNNER_TEMP/t0"
+
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: ".nvmrc"
+          cache: npm
+
+      - name: Setup Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          sudo apt-get -o Acquire::Retries=3 update
+          sudo apt-get install -y python3 python3-pip dos2unix yasm nasm build-essential libgtk2.0-dev libpython3-dev m4 uuid libasound2-dev libcurl4-openssl-dev libdbus-1-dev libdrm-dev libdbus-glib-1-dev libgtk-3-dev libpulse-dev libx11-xcb-dev libxt-dev xvfb lld llvm --fix-missing
+
+      - name: Load Surfer CI setup
+        run: |
+          VERSION=$(node -p "require('./surfer.json').brands.release.release.displayVersion")
+          npm run surfer -- ci --brand release --display-version "$VERSION"
+
+      - name: Download Firefox and dependencies
+        run: npm run download
+
+      - name: Setup for Windows
+        run: |
+          set -x
+          mkdir -p ~/win-cross
+          cd engine/
+          sudo apt-get -o Acquire::Retries=3 install python3-launchpadlib
+          sudo add-apt-repository ppa:savoury1/backports
+          sudo apt-get -o Acquire::Retries=3 update
+          sudo apt-get -o Acquire::Retries=3 install -y python3-pip autoconf \
+            autoconf2.13 automake bison build-essential cabextract curl cmake flex gawk \
+            gcc-multilib git gnupg jq libbz2-dev libexpat1-dev libffi-dev libncursesw5-dev \
+            libsqlite3-dev libssl-dev libtool libucl-dev libxml2-dev msitools ninja-build \
+            openssh-client p7zip-full pkg-config procps python3-requests python3-toml scons \
+            subversion tar unzip uuid uuid-dev wget zip zlib1g-dev aria2
+          echo Setup wine
+          aria2c "https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.cache.level-3.toolchains.v3.linux64-wine.latest/artifacts/public/build/wine.tar.zst" -o wine.tar.zst
+          tar --zstd -xf wine.tar.zst -C ~/win-cross
+          rm wine.tar.zst
+          echo Setup Visual Studio
+          ./mach python --virtualenv build taskcluster/scripts/misc/get_vs.py build/vs/vs2026.yaml ~/win-cross/vs2026
+
+      - name: Import
+        run: |
+          . "$HOME/.cargo/env"
+          npm run import -- --verbose
+
+      - name: Bootstrap
+        run: |
+          set -x
+          chmod -R +x "$(echo ~)/win-cross/vs2026" || true
+          export SURFER_PLATFORM="win32"
+          npm run bootstrap
+          cd engine/
+          ls ~/.mozbuild/clang/lib/clang/
+          echo "export LIB=\"$(cd ~/.mozbuild/clang/lib/clang/* && cd lib/windows && pwd)\"" >> ../configs/common/mozconfig
+          cat ../configs/common/mozconfig
+
+      - name: Setup Rust
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain $(sed -n 's/^channel *= *"\(.*\)"/\1/p' rust-toolchain.toml)
+          source $HOME/.cargo/env
+          rustup target add x86_64-pc-windows-msvc
+          # Stored in build/windows/.windows-rs-version
+          WINDOWS_RS_VERSION=$(cat build/windows/.windows-rs-version)
+          curl -fsSL "https://static.crates.io/crates/cargo-download/cargo-download-0.1.2.crate" | tar xz -C /tmp
+          (cd /tmp/cargo-download-0.1.2 && cargo generate-lockfile && cargo update tinyvec --precise 1.12.0)
+          RUSTFLAGS="--cap-lints=allow" cargo install --path /tmp/cargo-download-0.1.2 --locked
+          cd engine/
+          cargo download -x windows=$WINDOWS_RS_VERSION
+          echo "" >> ../configs/common/mozconfig
+          echo "export MOZ_WINDOWS_RS_DIR=$(pwd)/windows-$WINDOWS_RS_VERSION" >> ../configs/common/mozconfig
+
+      - name: Build language packs
+        run: sh scripts/download-language-packs.sh
+
+      - name: Machine report (before build)
+        run: |
+          df -h / /mnt || true
+          echo "Setup took $(( ($(date -u +%s) - $(cat "$RUNNER_TEMP/t0")) / 60 )) minutes" | tee -a "$GITHUB_STEP_SUMMARY"
+          date -u +%s > "$RUNNER_TEMP/t1"
+
+      - name: Build
+        env:
+          ZEN_RELEASE_BRANCH: release
+        run: |
+          set -x
+          dos2unix configs/windows/mozconfig
+          export SURFER_PLATFORM="win32"
+          export ZEN_CROSS_COMPILING=1
+          export ZEN_GA_DISABLE_PGO=1
+          export ZEN_DISABLE_LTO=1
+          bash .github/workflows/src/release-build.sh
+
+      - name: Machine report (after build)
+        if: always()
+        run: |
+          df -h / /mnt || true
+          free -h
+          if [ -f "$RUNNER_TEMP/t1" ]; then
+            echo "Build step took $(( ($(date -u +%s) - $(cat "$RUNNER_TEMP/t1")) / 60 )) minutes" | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Package
+        env:
+          ZEN_GA_DISABLE_PGO: true
+        run: |
+          set -x
+          export SURFER_PLATFORM="win32"
+          export ZEN_CROSS_COMPILING=1
+          export ZEN_RELEASE=1
+          export ZEN_DISABLE_LTO=1
+          npm run package
+          ls -la ./dist
+          echo "Packaged. Whole job so far: $(( ($(date -u +%s) - $(cat "$RUNNER_TEMP/t0")) / 60 )) minutes" | tee -a "$GITHUB_STEP_SUMMARY"
